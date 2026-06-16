@@ -1435,7 +1435,7 @@ function saveManualResult() {
   if (!state.manualResults) state.manualResults = {};
   state.manualResults[key] = { h: parseInt(h), a: parseInt(a) };
   // Save to Firebase
-  if (window.firebaseReady) window.fbSet('prode/state/manualResults', state.manualResults);
+  if (window.firebaseReady) {   const safeManual = {};   Object.entries(state.manualResults).forEach(([k,v]) => { safeManual[safeKey(k)] = v; });   window.fbSet('prode/state/manualResults', safeManual); }
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ players: state.players, picks: state.picks, pins: state.pins, manualLock: state.manualLock, manualResults: state.manualResults, adminReopened: state.adminReopened }));
   renderManualResultsList();
   populateManualMatchSelect();
@@ -1448,7 +1448,7 @@ function saveManualResult() {
 function deleteManualResult(key) {
   if (!confirm('¿Borrar este resultado manual?')) return;
   delete state.manualResults[key];
-  if (window.firebaseReady) window.fbSet('prode/state/manualResults', state.manualResults);
+  if (window.firebaseReady) {   const safeManual = {};   Object.entries(state.manualResults).forEach(([k,v]) => { safeManual[safeKey(k)] = v; });   window.fbSet('prode/state/manualResults', safeManual); }
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ players: state.players, picks: state.picks, pins: state.pins, manualLock: state.manualLock, manualResults: state.manualResults, adminReopened: state.adminReopened }));
   renderManualResultsList();
   populateManualMatchSelect();
