@@ -782,7 +782,11 @@ function syncFromFirebase() {
     state.adminReopened = data.adminReopened || false;
     // Load API results from Firebase if available (persists across devices)
     if (data.apiResults && Object.keys(data.apiResults).length > 0) {
-      apiResults = { ...data.apiResults, ...apiResults }; // merge, local cache wins
+      const restored = {};
+      Object.entries(data.apiResults).forEach(([k,v]) => {
+        restored[k.replace(/__/g, '|')] = v; // restore | from __
+      });
+      apiResults = { ...restored, ...apiResults };
     }
 
     // Sync to local backup
@@ -1070,28 +1074,7 @@ async function fetchResults(force = false) {
     }
   } catch(e) { console.warn('API1 error:', e); }
 
-  // === API 2: football-data.org ===
-  try {
-    const res = await fetch(FOOTBALL_DATA_URL + '?stage=GROUP_STAGE', {
-      headers: { 'X-Auth-Token': FOOTBALL_DATA_KEY }
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const matches = data.matches || [];
-      const partial = {};
-      matches.forEach(m => {
-        if (!m.score || m.score.fullTime.home === null) return;
-        const home = API_NAME_MAP[m.homeTeam.name] || m.homeTeam.name;
-        const away = API_NAME_MAP[m.awayTeam.name] || m.awayTeam.name;
-        partial[home + '|' + away] = { h: m.score.fullTime.home, a: m.score.fullTime.away };
-      });
-      if (Object.keys(partial).length > 0) {
-        apiResults = { ...apiResults, ...partial };
-        loaded = true;
-        console.log('✅ API2 (football-data.org):', Object.keys(partial).length, 'resultados');
-      }
-    }
-  } catch(e) { console.warn('API2 error:', e); }
+  // API 2: football-data.org — blocked by CORS from browser, skipped
 
   // === API 3: openfootball (GitHub, sin key) ===
   try {
@@ -1118,7 +1101,9 @@ async function fetchResults(force = false) {
     localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: apiResults }));
     // Also save to Firebase so results persist across devices and page updates
     if (window.firebaseReady) {
-      window.fbSet('prode/state/apiResults', apiResults).catch(e => console.warn('Firebase apiResults save error:', e));
+      const safeResults = {};
+      Object.entries(apiResults).forEach(([k,v]) => { safeResults[safeKey(k)] = v; });
+      window.fbSet('prode/state/apiResults', safeResults).catch(e => console.warn('Firebase apiResults save error:', e));
     }
     const count = Object.keys(apiResults).length;
     setSyncStatus('ok', `${count} resultados • ${new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}`);
@@ -1136,6 +1121,8 @@ function getMatchResult(match) {
   }
   return apiResults[match.home + '|' + match.away] || null;
 }
+
+function safeKey(k) { return k.replace(/[|.#$\[\]\/]/g, '__'); }
 
 function setSyncStatus(status, label) {
   ['sync-dot','sync-dot-admin'].forEach(id => {
