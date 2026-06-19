@@ -243,7 +243,7 @@
 <header>
   <div class="header-badge">⚽ Sierras Chicas • Mundial 2026</div>
   <h1>PRODE <span>PAPACHOS,</span><br>MAMACHAS Y<br>OTRAS <span>ESPECIES</span></h1>
-  <p>Fase de grupos — 72 partidos — Fase de grupos — 72 partidos — Del 11 al 27 de junio</p>
+  <p>Fase de grupos — 72 partidos — Del 11 al 27 de junio</p>
   <div class="points-legend">
     <span>✅ Resultado exacto <strong>+3 pts</strong></span>
     <span>🎯 Ganador/empate <strong>+1 pt</strong></span>
@@ -479,6 +479,14 @@ function syncFromFirebase() {
     state.manualLock = data.manualLock || false;
     state.adminReopened = data.adminReopened || false;
     state.results = data.results || {};
+// También leer resultados viejos si no hay nuevos
+if (!Object.keys(state.results).length && data.manualResults) {
+  Object.entries(data.manualResults).forEach(([k, v]) => {
+    const key = k.replace(/___PIPE___/g, '|').replace(/___DOT___/g, '.').replace(/__/g, '|');
+    const m = MATCHES.find(x => (x.home + '|' + x.away) === key);
+    if (m) state.results[String(m.id)] = v;
+  });
+}
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 
